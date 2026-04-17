@@ -1,24 +1,17 @@
-FROM php:8.2-apache
+FROM php:8.2-cli
 
-RUN apt-get update && apt-get install -y \
-    libzip-dev unzip git curl \
-    && docker-php-ext-install pdo pdo_mysql zip
+WORKDIR /app
 
-RUN a2enmod rewrite
+COPY . .
 
-COPY . /var/www/html
+RUN apt-get update && apt-get install -y unzip git curl \
+    && docker-php-ext-install pdo pdo_mysql
 
-WORKDIR /var/www/html
+# install composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
+RUN composer install
 
-RUN curl -sS https://getcomposer.org/installer | php
-RUN php composer.phar install
+EXPOSE 8000
 
-RUN chmod -R 777 storage bootstrap/cache
-
-RUN php artisan key:generate || true
-RUN php artisan config:clear || true
-RUN php artisan cache:clear || true
-
-EXPOSE 80
+CMD php artisan serve --host=0.0.0.0 --port=8000
